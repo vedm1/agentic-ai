@@ -1,0 +1,82 @@
+research_task:
+  description: >
+    Conduct thorough research on company {company}. Focus on:
+    1. Current company status and health
+    2. Historical company performance
+    3. Major challenges and opportunities
+    4. Recent news and events
+    5. Future outlook and potential developments
+
+    Make sure to organize your findings in a structured format with clear sections.
+  expected_output: >
+    A comprehensive research document with well-organized sections covering
+    all the requested aspects of {company}. Include specific facts, figures,
+    and examples where relevant.
+  agent: researcher
+
+analysis_part1_task:
+  description: >
+    Create the first part of a report on {company}. This section should include:
+    1. Title and Executive Summary (2-3 concise paragraphs only)
+    2. Company Overview (1-2 pages max, cover key facts, market position, business model)
+    3. Historical Performance (1-2 pages max, focus on key metrics and trends)
+
+    Keep it CONCISE and focused. Aim for 300-400 words per section maximum.
+    Format in professional markdown with clear headings.
+  expected_output: >
+    A concise, well-formatted markdown document (approximately 1000-1200 words total)
+    containing title, executive summary, company overview, and historical performance for {company}.
+  agent: analyst
+  context:
+    - research_task
+  output_file: output/report_part1.md
+
+analysis_part2_task:
+  description: >
+    Create the second part of the report on {company}, focusing on:
+    1. Major Challenges (identify top 3-4 challenges with brief analysis - 300-400 words total)
+    2. Opportunities (identify top 3-4 opportunities with brief analysis - 300-400 words total)
+
+    Be CONCISE - use bullet points where appropriate. Focus on the most important points.
+    Format in professional markdown. Don't include title or executive summary.
+  expected_output: >
+    A concise markdown document (approximately 700-900 words total) containing
+    focused analysis of challenges and opportunities for {company}.
+  agent: analyst
+  context:
+    - research_task
+  output_file: output/report_part2.md
+
+analysis_part3_task:
+  description: >
+    Create the final part of the report on {company}, including:
+    1. Future Outlook (2-3 key projections, 300-400 words)
+    2. Risk Assessment (top 3-4 risks, 200-300 words)
+    3. Final Conclusion (summary and key takeaways, 200-250 words)
+
+    Be CONCISE. Note this should not be used for trading decisions.
+    Format in professional markdown. Don't include title or executive summary.
+    IMPORTANT: Complete all three sections fully before finishing.
+  expected_output: >
+    A concise markdown document (approximately 700-1000 words total) containing
+    future outlook, risk assessment, and a complete conclusion for {company}.
+  agent: analyst
+  context:
+    - research_task
+  output_file: output/report_part3.md
+
+combine_report_task:
+  description: >
+    Combine all report sections into one cohesive, professional final report on {company}.
+    Read the three report parts and merge them into a single, well-formatted document.
+    Ensure smooth transitions between sections and consistent formatting throughout.
+    Remove any duplicate headings and ensure the report flows logically from start to finish.
+  expected_output: >
+    A complete, polished final report on {company} that combines all sections
+    into one cohesive document with consistent formatting and smooth flow.
+  agent: analyst
+  context:
+    - analysis_part1_task
+    - analysis_part2_task
+    - analysis_part3_task
+  output_file: output/report.md

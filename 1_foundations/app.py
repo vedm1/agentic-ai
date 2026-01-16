@@ -1,3 +1,4 @@
+from anthropic import Anthropic
 from dotenv import load_dotenv
 from openai import OpenAI
 import json
@@ -31,7 +32,7 @@ def record_unknown_question(question):
 record_user_details_json = {
     "name": "record_user_details",
     "description": "Use this tool to record that a user is interested in being in touch and provided an email address",
-    "parameters": {
+    "input_schema": {
         "type": "object",
         "properties": {
             "email": {
@@ -56,7 +57,7 @@ record_user_details_json = {
 record_unknown_question_json = {
     "name": "record_unknown_question",
     "description": "Always use this tool to record any question that couldn't be answered as you didn't know the answer",
-    "parameters": {
+    "input_schema": {
         "type": "object",
         "properties": {
             "question": {
@@ -69,21 +70,20 @@ record_unknown_question_json = {
     }
 }
 
-tools = [{"type": "function", "function": record_user_details_json},
-        {"type": "function", "function": record_unknown_question_json}]
+tools = [record_user_details_json, record_unknown_question_json]
 
 
 class Me:
 
     def __init__(self):
-        self.openai = OpenAI()
-        self.name = "Ed Donner"
-        reader = PdfReader("me/linkedin.pdf")
-        self.linkedin = ""
+        self.anthropic = Anthropic(api_key=os.getenv("CLAUDE_KEY"))
+        self.name = "Ved Muthal"
+        reader = PdfReader("me/resume-ved-muthal.pdf")
+        self.profile = ""
         for page in reader.pages:
             text = page.extract_text()
             if text:
-                self.linkedin += text
+                self.profile += text
         with open("me/summary.txt", "r", encoding="utf-8") as f:
             self.summary = f.read()
 
@@ -108,24 +108,77 @@ Be professional and engaging, as if talking to a potential client or future empl
 If you don't know the answer to any question, use your record_unknown_question tool to record the question that you couldn't answer, even if it's about something trivial or unrelated to career. \
 If the user is engaging in discussion, try to steer them towards getting in touch via email; ask for their email and record it using your record_user_details tool. "
 
-        system_prompt += f"\n\n## Summary:\n{self.summary}\n\n## LinkedIn Profile:\n{self.linkedin}\n\n"
+        system_prompt += f"\n\n## Summary:\n{self.summary}\n\n## LinkedIn Profile:\n{self.profile}\n\n"
         system_prompt += f"With this context, please chat with the user, always staying in character as {self.name}."
         return system_prompt
-    
+
+    # def chat(self, message, history):
+    #     messages = [{"role": "system", "content": self.system_prompt()}] + history + [{"role": "user", "content": message}]
+    #     done = False
+    #     while not done:
+    #         response = self.openai.chat.completions.create(model="gpt-4o-mini", messages=messages, tools=tools)
+    #         if response.choices[0].finish_reason=="tool_calls":
+    #             message = response.choices[0].message
+    #             tool_calls = message.tool_calls
+    #             results = self.handle_tool_call(tool_calls)
+    #             messages.append(message)
+    #             messages.extend(results)
+    #         else:
+    #             done = True
+    #     return response.choices[0].message.content
+
     def chat(self, message, history):
-        messages = [{"role": "system", "content": self.system_prompt()}] + history + [{"role": "user", "content": message}]
-        done = False
-        while not done:
-            response = self.openai.chat.completions.create(model="gpt-4o-mini", messages=messages, tools=tools)
-            if response.choices[0].finish_reason=="tool_calls":
-                message = response.choices[0].message
-                tool_calls = message.tool_calls
-                results = self.handle_tool_call(tool_calls)
-                messages.append(message)
-                messages.extend(results)
-            else:
-                done = True
-        return response.choices[0].message.content
+        try:
+            history = [{"role": h["role"], "content": h["content"]} for h in history]
+            messages = history + [{"role": "user", "content": message}]
+            while True:
+                # This is the call to the LLM - see that we pass in the tools json
+                response = self.anthropic.messages.create(
+                    model="claude-sonnet-4-5",
+                    max_tokens=10240,
+                    system=self.system_prompt(),
+                    messages=messages,
+                    tools=tools
+                )
+
+                # Check if Claude wants to use tools
+                if response.stop_reason == "tool_use":
+                    # Find tool use blocks
+                    tool_use_blocks = [block for block in response.content if block.type == "tool_use"]
+
+                    # Add assistant's response to messages
+                    messages.append({"role": "assistant", "content": response.content})
+
+                    # Execute tools
+                    tool_results = []
+                    for block in response.content:
+                        if block.type == "tool_use":
+                            tool_name = block.name
+                            arguments = block.input
+                            print(f"Tool called: {tool_name}", flush=True)
+
+                            tool_func = globals().get(tool_name)
+                            result = tool_func(**arguments) if tool_func else {}
+
+                            tool_results.append({
+                                "type": "tool_result",
+                                "tool_use_id": block.id,
+                                "content": json.dumps(result)
+                            })
+                        # Add tool results to messages
+                    messages.append({"role": "user", "content": tool_results})
+                else:
+                    # No more tools to call, extract final text response
+                    text_response = ""
+                    for block in response.content:
+                        if block.type == "text":
+                            text_response += block.text
+                    return text_response
+        except Exception as e:
+            print(f"ERROR: {type(e).__name__}: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return f"An error occurred: {str(e)}"
     
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@
   <component name="Black">
     <option name="sdkName" value="cyber_security_poc" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="uv (agents)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.10 virtualenv at ~/MyPythonStuff/agentic-ai/3_crew/my_financial_researcher/.venv" project-jdk-type="Python SDK" />
   <component name="PyCharmDSProjectLayout">
     <option name="id" value="JupyterRightHiddenStructureLayout" />
   </component>
