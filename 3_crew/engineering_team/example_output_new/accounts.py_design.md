@@ -1,4 +1,4 @@
-```markdown
+```Markdown
 # Module: accounts.py
 
 This module implements a simple account management system for a trading simulation platform. It provides functionality for creating accounts, managing funds, recording transactions, calculating portfolio value, and generating reports.

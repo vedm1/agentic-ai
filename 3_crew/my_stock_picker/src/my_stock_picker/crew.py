@@ -4,6 +4,12 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from typing import List
 from pydantic import BaseModel, Field
 from crewai_tools import SerperDevTool
+from .tools.push_tool import PushNotificationTool
+from crewai.memory import LongTermMemory, ShortTermMemory, EntityMemory
+from crewai.memory.storage.rag_storage import RAGStorage
+from crewai.memory.storage.ltm_sqlite_storage import LTMSQLiteStorage
+import os
+from pathlib import Path
 
 class TrendingCompany(BaseModel):
     """ A company that is in the news and attracting attention """
@@ -37,7 +43,7 @@ class MyStockPicker():
 
     @agent
     def trending_company_finder(self) -> Agent:
-        return Agent(config=self.agents_config['trending_company_finder'], tools=[SerperDevTool()])
+        return Agent(config=self.agents_config['trending_company_finder'], tools=[SerperDevTool()], memory=True)
 
     @agent
     def financial_researcher(self) -> Agent:
@@ -45,7 +51,7 @@ class MyStockPicker():
 
     @agent
     def stock_picker(self) -> Agent:
-        return Agent(config=self.agents_config['stock_picker'])
+        return Agent(config=self.agents_config['stock_picker'], tools=[PushNotificationTool()], memory=True)
 
     @task
     def find_trending_companies(self) -> Task:
@@ -72,9 +78,39 @@ class MyStockPicker():
     def crew(self) -> Crew:
         """Creates the stock picker crew"""
 
+        # Define memory path in project root (my_stock_picker/memory)
+        memory_path = Path(__file__).parent.parent.parent / "memory"
+        memory_path.mkdir(exist_ok=True)
+
         manager = Agent(
             config=self.agents_config['manager'],
             allow_delegation=True
+        )
+
+        short_term_memory = ShortTermMemory(
+            storage=RAGStorage(
+                embedder_config={
+                    "provider": "openai",
+                    "model_name": "text-embedding-3-small"
+                },
+                type="short_term",
+                path=str(memory_path)
+            )
+        )
+        long_term_memory = LongTermMemory(
+            storage=LTMSQLiteStorage(
+                db_path=str(memory_path / "long_term_memory_storage.db")
+            )
+        )
+        entity_memory = EntityMemory(
+            storage=RAGStorage(
+                embedder_config={
+                    "provider": "openai",
+                    "model_name": "text-embedding-3-small"
+                },
+                type="entities",
+                path=str(memory_path)
+            )
         )
 
         return Crew(
@@ -82,6 +118,10 @@ class MyStockPicker():
             tasks=self.tasks,
             process=Process.hierarchical,
             verbose=True,
-            manager_agent=manager
+            manager_agent=manager,
+            memory=True,
+            long_term_memory=long_term_memory,
+            short_term_memory=short_term_memory,
+            entity_memory=entity_memory
         )
 

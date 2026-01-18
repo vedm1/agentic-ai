@@ -14,7 +14,8 @@ def run():
     """
 
     inputs = {
-        'sector': 'Consumption and FMCG'
+        'sector': 'Automotive',
+        'country': 'India'
     }
 
     result = MyStockPicker().crew().kickoff(inputs=inputs)
