@@ -1,4 +1,3 @@
-```markdown
 # Module: accounts.py
 
 This module is designed to manage user accounts for a trading simulation platform. It allows users to create accounts, deposit and withdraw funds, perform share transactions, and provides reporting on account status.
