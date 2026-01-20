@@ -1,0 +1,10 @@
+services:
+  dev:
+    build: .
+    image: personal-agents-env:latest
+    volumes:
+      - .:/app
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    command: sleep infinity
